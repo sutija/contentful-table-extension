@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Sample Editor Extension</title>
+  <!-- Contentful's default styles -->
+  <link rel="stylesheet" href="https://contentful.github.io/ui-extensions-sdk/cf-extension.css">
+  <!-- UI Extensions SDK -->
+  <script src="https://contentful.github.io/ui-extensions-sdk/cf-extension-api.js"></script>
+</head>
+
+<body>
+  <div id="content">
+    <table>
+      <thead>
+        <tr id="tableHeader" />
+      </thead>
+      <tbody id="tableBody" />
+    </table>
+  </div>
+  <script>
+    const mainElement = document.getElementById('content');
+    const tableHeader = document.getElementById('tableHeader');
+    const tableBody = document.getElementById('tableBody');
+
+    const TYPES = {
+      BODY: 'BODY',
+      HEADER: 'HEADER'
+    };
+
+    class tableClass {
+      constructor(field) { 
+        this.field = field;
+        this.headers = [''];
+        this.body = [['']];
+
+        if (field.getValue()) {
+          this.headers = field.getValue().headers;
+        }
+        if (field.getValue()) {
+          this.body = field.getValue().body;
+        }
+
+        mainElement.addEventListener('keyup', event => {
+          this.updateFieldValue(event.target);
+        });
+
+        this.renderTable = this.renderTable.bind(this);
+        this.renderHeader = this.renderHeader.bind(this);
+        this.renderBody = this.renderBody.bind(this);
+        this.updateFields = this.updateFields.bind(this);
+
+        this.renderTable();
+      };
+
+      addRow (afterIndex) {
+        const columns = Array(this.headers.length).fill('');
+        this.body.splice( afterIndex, 0, columns);
+        this.updateFields();
+        this.renderTable();
+      }
+
+      removeRow (index) {
+        this.body.splice(index, 1);
+        this.updateFields();
+        this.renderTable();
+      }
+
+      addColumn (afterIndex) {
+        this.headers.splice(afterIndex, 0, '');
+        this.body.map(row => row.splice(afterIndex, 0, ''));
+        this.updateFields();
+        this.renderTable();
+      }
+
+      removeColumn (index) {
+        this.headers.splice(index, 1);
+        this.body.map(row => row.splice(index, 1));
+        this.updateFields();
+        this.renderTable();
+      }
+
+      updateFieldValue(element) {
+        // Get element location in array [type]_[row]_[column]
+        const elLocation = element.id.split('_');
+
+        // Update value
+        if (elLocation[0] === TYPES.HEADER) {
+          this.headers[elLocation[2]] = element.value;
+        }
+        if (elLocation[0] === TYPES.BODY) {
+          this.body[elLocation[1]][elLocation[2]] = element.value;
+        }
+        this.updateFields();
+      }
+
+      renderHeader() {
+        tableHeader.innerHTML = '';
+        // Add empty cell
+        tableHeader.appendChild(document.createElement('th'));
+
+        this.headers.forEach((value, index) => {
+          const thElement = document.createElement('th');
+          const inputElement = document.createElement('input');
+          const addColumnButton = document.createElement('button');
+          const removeColumnButton = document.createElement('button');
+
+          inputElement.id = `${TYPES.HEADER}_0_${index}`;
+          inputElement.value = value;
+
+          addColumnButton.textContent = '+';
+          addColumnButton.title = 'Add Column';
+          addColumnButton.onclick = () => { this.addColumn(index + 1) };
+
+          removeColumnButton.textContent = '-';
+          removeColumnButton.title = 'Remove Column';
+          removeColumnButton.onclick = () => { this.removeColumn(index) };
+
+          thElement.appendChild(removeColumnButton);
+          thElement.appendChild(inputElement);
+          thElement.appendChild(addColumnButton);
+
+          tableHeader.appendChild(thElement);
+        });
+        
+        // Add empty cell
+        tableHeader.appendChild(document.createElement('th'));
+      }
+
+      renderBody() {
+        tableBody.innerHTML = '';
+        this.body.forEach((row, indexRow) => {
+          const rowElement = document.createElement('tr');
+
+          // add remove row cell 
+          if (this.body.length > 1) {
+            const removeRowTd = document.createElement('td');
+            const removeRowButton = document.createElement('button');
+            removeRowButton.textContent = 'Remove row';
+            removeRowButton.onclick = () => { this.removeRow(indexRow) };
+            removeRowTd.appendChild(removeRowButton);
+            rowElement.appendChild(removeRowTd);
+          } else {
+            rowElement.appendChild(document.createElement('td'));
+          }
+
+          row.forEach((value, indexColumn) => {
+            const tdElement = document.createElement('th');
+            const inputElement = document.createElement('input');
+
+            inputElement.id = `${TYPES.BODY}_${indexRow}_${indexColumn}`;
+            inputElement.value = value;
+
+            tdElement.appendChild(inputElement);
+
+            rowElement.appendChild(tdElement);
+          });
+
+          // add add row cell
+          const addRowTd = document.createElement('td');
+          const addRowButton = document.createElement('button');
+          addRowButton.textContent = 'add row';
+          addRowButton.onclick = () => { this.addRow(indexRow + 1) };
+          addRowTd.appendChild(addRowButton);
+          rowElement.appendChild(addRowTd);
+
+          tableBody.appendChild(rowElement);
+        });
+      }
+
+      renderTable() {
+        this.renderHeader();
+        this.renderBody();
+      }
+
+      updateFields() {
+        this.field.setValue({
+          headers: this.headers,
+          body: this.body
+        })
+      }
+    }
+
+    window.contentfulExtension.init(function (extension) {
+      field = extension.field;
+      const _tableClass = new tableClass(field);
+    })
+  </script>
+</body>
+
+</html>
