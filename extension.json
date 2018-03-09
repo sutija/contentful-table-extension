@@ -1,6 +1,6 @@
 {
   "id": "table",
   "name": "Table field",
-  "src": "https://a7109243.ngrok.io/index.html",
+  "src": "./index.html",
   "fieldTypes": ["Object"]
 }
